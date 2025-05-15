@@ -1,0 +1,71 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ReportStatus {
+  PENDING
+  VERIFIED
+  FIXED
+  REJECTED
+}
+
+model DetectionData {
+  id                String    @id @default(uuid())
+  originalImage     String
+  annotatedImage    String?
+  userId            String
+  username          String
+  latitude          Float
+  longitude         Float
+  accuracyMeters    Float?
+  notes             String?
+  rawDetections     String    // JSON string of all detection data
+  counts            String    // JSON string of counts by class
+  processingTimeMs  Float
+  averageConfidence Float
+  totalDetections   Int
+  highestSeverity   String?   // "LOW", "MEDIUM", "HIGH", "CRITICAL"
+  status            ReportStatus @default(PENDING)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Breakdown of individual detections
+  detections        Detection[]
+}
+
+model Detection {
+  id                  String   @id @default(uuid())
+  detectionDataId     String
+  classId             Int
+  className           String
+  confidence          Float
+  severity            String
+  bbox                String   // JSON string of bounding box coordinates
+  center              String   // JSON string of center coordinates
+  positionDescription String   // Description of position in the image
+  relativePosition    String?  // JSON string of relative position [x, y]
+  area                Float
+  width               Float
+  height              Float
+  aspectRatio         Float?
+  percentageOfImage   Float
+
+  detectionData       DetectionData @relation(fields: [detectionDataId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id         String   @id @default(uuid())
+  username   String   @unique
+  email      String   @unique
+  password   String
+  role       String   @default("user")
+  createdAt  DateTime @default(now())
+  lastLogin  DateTime?
+}
