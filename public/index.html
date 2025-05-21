@@ -1,78 +1,180 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Adaptive Frame Rate Dashcam</title>
-  <link rel="stylesheet" href="/style.css">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background-color: #f4f4f4;
-      padding: 20px;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
 
-    h1 { color: #333; }
-
-    #video-container {
-      position: relative;
-      display: inline-block;
-      border-radius: 10px;
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       overflow: hidden;
-      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+      background-color: #000;
+      color: #fff;
+    }
+
+    /* Full-screen video container */
+    #video-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #000;
+      z-index: 1;
     }
 
     video {
-      border-radius: 10px;
-      border: 3px solid #333;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Start button overlay */
+    #controls-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 100;
+      text-align: center;
     }
 
     #startStream {
-      margin-top: 10px;
-      padding: 10px 20px;
-      font-size: 16px;
+      padding: 12px 24px;
+      font-size: 18px;
       border: none;
-      border-radius: 5px;
-      background-color: #007BFF;
+      border-radius: 50px;
+      background-color: rgba(0, 123, 255, 0.8);
       color: white;
       cursor: pointer;
-      transition: background 0.3s;
+      transition: background 0.3s, transform 0.2s;
+      backdrop-filter: blur(5px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     }
 
     #startStream:hover {
-      background-color: #0056b3;
+      background-color: rgba(0, 123, 255, 1);
+      transform: scale(1.05);
     }
 
-    #status {
-      margin-top: 15px;
-      font-size: 18px;
-      color: #555;
-    }
-
-    .location-info {
-      margin-top: 10px;
+    /* Stats panel */
+    #stats-panel {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.7);
+      border-radius: 8px;
+      padding: 8px;
       font-size: 14px;
-      color: #666;
-      max-width: 640px;
-      margin-left: auto;
-      margin-right: auto;
-      text-align: left;
-      background-color: #eee;
-      padding: 10px;
-      border-radius: 5px;
+      font-family: monospace;
+      z-index: 10;
+      max-width: 300px;
+      backdrop-filter: blur(5px);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      opacity: 0.8;
+      transition: opacity 0.3s;
       display: none;
     }
-    
-    .speed-info {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #333;
-      padding: 5px 10px;
-      background-color: #d4edda;
-      border-radius: 5px;
-      display: inline-block;
+
+    #stats-panel:hover {
+      opacity: 1;
+    }
+
+    .stat-group {
+      margin-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 4px;
+    }
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0;
+    }
+
+    .stat-label {
+      color: rgba(255, 255, 255, 0.7);
+      margin-right: 8px;
+    }
+
+    .stat-value {
+      color: rgba(255, 255, 255, 0.9);
       font-weight: bold;
+    }
+
+    /* Status indicator */
+    #status-indicator {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      padding: 8px 16px;
+      border-radius: 30px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-size: 14px;
+      z-index: 10;
+      transition: all 0.3s ease;
+      opacity: 0.8;
+      display: none;
+      align-items: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .status-icon {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+      background-color: #888;
+    }
+
+    .status-active {
+      background-color: #4CAF50;
+    }
+
+    .status-error {
+      background-color: #f44336;
+    }
+
+    .status-warning {
+      background-color: #ff9800;
+    }
+
+    /* Detection alert */
+    #detection-alert {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      border-radius: 8px;
+      background-color: rgba(220, 53, 69, 0.9);
+      color: white;
+      z-index: 20;
+      display: none;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+      max-width: 90%;
+      animation: fadeInUp 0.3s forwards;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translate(-50%, 20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
     }
 
     /* Flash effect when capturing a frame */
@@ -81,64 +183,79 @@
     }
 
     @keyframes flashEffect {
-      0% { opacity: 0.5; }
-      100% { opacity: 1; }
-    }
-    
-    #detectionResults {
-      margin-top: 15px;
-      padding: 10px;
-      background-color: #f8f9fa;
-      border-radius: 5px;
-      max-width: 640px;
-      margin-left: auto;
-      margin-right: auto;
-      text-align: left;
-      display: none;
-    }
-    
-    .detection-info {
-      padding: 8px;
-      margin-top: 5px;
-      border-left: 4px solid #007BFF;
-      background-color: #e9f5ff;
-    }
-    
-    .detection-critical {
-      border-left-color: #dc3545;
-      background-color: #ffe9e9;
-    }
-    
-    .detection-high {
-      border-left-color: #fd7e14;
-      background-color: #fff3e9;
-    }
-    
-    .detection-medium {
-      border-left-color: #ffc107;
-      background-color: #fffde9;
-    }
-    
-    .detection-low {
-      border-left-color: #28a745;
-      background-color: #e9ffe9;
+      0% {
+        opacity: 0.5;
+      }
+
+      100% {
+        opacity: 1;
+      }
     }
   </style>
 </head>
-<body>
 
-  <h1>Adaptive Frame Rate Dashcam</h1>
+<body>
   <div id="video-container">
-    <video id="liveVideo" width="640" height="360" autoplay></video>
+    <video id="liveVideo" autoplay></video>
   </div>
-  <br>
-  <button id="startStream">Start Dashcam</button>
-  <p id="status">Waiting to start...</p>
-  <div id="speedDisplay" class="speed-info" style="display: none;">Speed: 0 km/h</div>
-  <div id="frameRateDisplay" class="speed-info" style="display: none; margin-left: 10px;">Frame Rate: 0 fps</div>
-  <div id="locationInfo" class="location-info"></div>
-  
-  <div id="detectionResults"></div>
+
+  <div id="controls-overlay">
+    <button id="startStream">START DASHCAM</button>
+  </div>
+
+  <div id="stats-panel">
+    <div class="stat-group">
+      <div class="stat-item">
+        <span class="stat-label">Status:</span>
+        <span class="stat-value" id="status-text">Idle</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Frame Rate:</span>
+        <span class="stat-value" id="frameRateDisplay">0 fps</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Speed:</span>
+        <span class="stat-value" id="speedDisplay">0 km/h</span>
+      </div>
+    </div>
+
+    <div class="stat-group">
+      <div class="stat-item">
+        <span class="stat-label">Latitude:</span>
+        <span class="stat-value" id="latitudeDisplay">--</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Longitude:</span>
+        <span class="stat-value" id="longitudeDisplay">--</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Accuracy:</span>
+        <span class="stat-value" id="accuracyDisplay">--</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Heading:</span>
+        <span class="stat-value" id="headingDisplay">--</span>
+      </div>
+    </div>
+
+    <div class="stat-group">
+      <div class="stat-item">
+        <span class="stat-label">Last Capture:</span>
+        <span class="stat-value" id="lastCaptureDisplay">--</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Next Capture:</span>
+        <span class="stat-value" id="nextCaptureDisplay">--</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="status-indicator">
+    <div class="status-icon"></div>
+    <span id="status">Waiting to start...</span>
+  </div>
+
+  <div id="detection-alert"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -150,13 +267,16 @@
     let watchId = null;
     let fastWatchId = null;
     let socket = null;
-    
+    let streamActive = false;
+    let nextCaptureTimeout = null;
+
     // Variables for adaptive frame rate
     let currentSpeed = 0; // in m/s
     let frameInterval = null;
     let lastCaptureTime = 0;
     let currentFrameRate = 0.2; // default to 1 frame per 5 seconds (0.2 fps)
-    
+    let nextScheduledCapture = 0;
+
     // Speed thresholds for frame rate adjustment (in km/h)
     const SPEED_THRESHOLDS = [
       { speed: 5, frameRate: 0.1 },   // Below 5 km/h: 0.1 fps (1 frame every 10 seconds)
@@ -165,169 +285,322 @@
       { speed: 100, frameRate: 1 },   // 60-100 km/h: 1 fps (1 frame per second)
       { speed: Infinity, frameRate: 2 } // Above 100 km/h: 2 fps (2 frames per second)
     ];
-    
-    document.getElementById('startStream').addEventListener('click', () => {
-      const liveVideo = document.getElementById('liveVideo');
-      const statusText = document.getElementById('status');
-      const locationInfo = document.getElementById('locationInfo');
-      const speedDisplay = document.getElementById('speedDisplay');
-      const frameRateDisplay = document.getElementById('frameRateDisplay');
-      const detectionResults = document.getElementById('detectionResults');
-      
-      locationInfo.style.display = 'block';
-      speedDisplay.style.display = 'inline-block';
-      frameRateDisplay.style.display = 'inline-block';
-      detectionResults.style.display = 'block';
-      
-      socket = io();
-      
-      // Start gathering location data immediately
+
+    // DOM elements
+    const elements = {
+      video: document.getElementById('liveVideo'),
+      startButton: document.getElementById('startStream'),
+      controlsOverlay: document.getElementById('controls-overlay'),
+      statsPanel: document.getElementById('stats-panel'),
+      statusIndicator: document.getElementById('status-indicator'),
+      statusText: document.getElementById('status'),
+      statusValueText: document.getElementById('status-text'),
+      speedDisplay: document.getElementById('speedDisplay'),
+      frameRateDisplay: document.getElementById('frameRateDisplay'),
+      latitudeDisplay: document.getElementById('latitudeDisplay'),
+      longitudeDisplay: document.getElementById('longitudeDisplay'),
+      accuracyDisplay: document.getElementById('accuracyDisplay'),
+      headingDisplay: document.getElementById('headingDisplay'),
+      lastCaptureDisplay: document.getElementById('lastCaptureDisplay'),
+      nextCaptureDisplay: document.getElementById('nextCaptureDisplay'),
+      detectionAlert: document.getElementById('detection-alert')
+    };
+
+    // Initialize UI
+    function setupEventListeners() {
+      elements.startButton.addEventListener('click', startDashcam);
+      window.addEventListener('beforeunload', cleanupResources);
+
+      // Double tap to show/hide stats
+      let lastTap = 0;
+      document.addEventListener('touchend', function (event) {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (tapLength < 500 && tapLength > 0) {
+          toggleStatsPanel();
+          event.preventDefault();
+        }
+        lastTap = currentTime;
+      });
+
+      // Add keyboard shortcut (s key) to toggle stats panel
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 's' || event.key === 'S') {
+          toggleStatsPanel();
+        }
+      });
+    }
+
+    function toggleStatsPanel() {
+      const stats = elements.statsPanel;
+      if (stats.style.display === 'none' || stats.style.display === '') {
+        stats.style.display = 'block';
+      } else {
+        stats.style.display = 'none';
+      }
+    }
+
+    function updateStatusIndicator(status, message) {
+      const statusIcon = elements.statusIndicator.querySelector('.status-icon');
+
+      elements.statusIndicator.style.display = 'flex';
+      elements.statusText.textContent = message;
+      elements.statusValueText.textContent = message;
+
+      // Reset classes
+      statusIcon.classList.remove('status-active', 'status-error', 'status-warning');
+
+      switch (status) {
+        case 'active':
+          statusIcon.classList.add('status-active');
+          break;
+        case 'error':
+          statusIcon.classList.add('status-error');
+          break;
+        case 'warning':
+          statusIcon.classList.add('status-warning');
+          break;
+        default:
+        // No class for default status
+      }
+    }
+
+    function showDetectionAlert(message, duration = 5000) {
+      elements.detectionAlert.textContent = message;
+      elements.detectionAlert.style.display = 'block';
+
+      setTimeout(() => {
+        elements.detectionAlert.style.display = 'none';
+      }, duration);
+    }
+
+    function startDashcam() {
+      if (streamActive) return;
+
+      updateStatusIndicator('warning', 'Initializing camera...');
+
+      // Hide controls overlay
+      elements.controlsOverlay.style.display = 'none';
+
+      // Show stats panel
+      elements.statsPanel.style.display = 'block';
+
+      // Connect to socket server
+      connectSocket();
+
+      // Start location tracking
       initializeLocationTracking();
-      
-      const constraints = { 
-        video: { 
-          facingMode: "environment", 
-          width: { ideal: 640 }, 
-          height: { ideal: 360 }
+
+      // Start camera
+      startCamera();
+    }
+
+    function connectSocket() {
+      try {
+        socket = io();
+
+        socket.on('connect', () => {
+          console.log('Connected to server');
+        });
+
+        socket.on('detectionComplete', handleDetectionResult);
+
+        socket.on('disconnect', () => {
+          console.log('Disconnected from server');
+          updateStatusIndicator('error', '🔴 Disconnected!');
+          stopStream();
+        });
+
+        socket.on('connect_error', (error) => {
+          console.error('Socket connection error:', error);
+          updateStatusIndicator('error', '⚠️ Server connection error!');
+        });
+
+        socket.on('error', (error) => {
+          console.error('Socket error:', error);
+          updateStatusIndicator('error', '⚠️ Streaming error: ' + error.message);
+        });
+      } catch (error) {
+        console.error('Failed to connect socket:', error);
+        updateStatusIndicator('error', '⚠️ Connection failed!');
+      }
+    }
+
+    function startCamera() {
+      const constraints = {
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
         }
       };
 
       navigator.mediaDevices.getUserMedia(constraints)
         .then((stream) => {
           console.log('Dashcam stream started');
-          liveVideo.srcObject = stream;
+          elements.video.srcObject = stream;
+          streamActive = true;
 
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          canvas.width = 640;
-          canvas.height = 360;
+          // Wait for video to be ready
+          elements.video.onloadedmetadata = () => {
+            updateStatusIndicator('active', '✅ Camera ready');
 
-          // Instead of a fixed interval, we'll use a dynamic approach
-          scheduleNextCapture();
-          
-          function captureFrame() {
-            console.log('Capturing frame...');
-            statusText.innerText = "📸 Capturing frame...";
-            lastCaptureTime = Date.now();
-
-            ctx.drawImage(liveVideo, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-
-            // Get the current best location
-            const locationToSend = getBestAvailableLocation();
-            
-            console.log('Sending frame with location data:', locationToSend);
-            statusText.innerText = "📤 Sending frame with location...";
-            liveVideo.classList.add('flash');
-
-            socket.emit('streamVideo', { 
-              imageData: dataUrl, 
-              location: locationToSend,
-              speed: currentSpeed,
-              frameRate: currentFrameRate
-            });
-
-            setTimeout(() => {
-              const accuracyText = locationToSend ? 
-                `${locationToSend.accuracy}m (confidence: ${locationToSend.confidence || 'N/A'})` : 
-                "unknown";
-              statusText.innerText = `✅ Frame sent with location accuracy: ${accuracyText}`;
-              liveVideo.classList.remove('flash');
-              
-              // Schedule next capture based on current speed
-              scheduleNextCapture();
-            }, 800);
-          }
-          
-          function scheduleNextCapture() {
-            // Calculate delay based on current speed and frame rate
-            const delay = 1000 / currentFrameRate;
-            
-            // Clear any existing scheduled capture
-            if (frameInterval) clearTimeout(frameInterval);
-            
-            // Schedule next capture
-            frameInterval = setTimeout(captureFrame, delay);
-            console.log(`Next frame scheduled in ${delay}ms (${currentFrameRate} fps)`);
-          }
-
-          // Handle detection results
-          socket.on('detectionComplete', (result) => {
-            console.log('Detection complete:', result);
-            
-            if (result.success) {
-              // Update the detection results display
-              const resultHTML = createDetectionResultHTML(result);
-              detectionResults.innerHTML = resultHTML;
-              
-              // Update status message
-              statusText.innerText = result.message;
-            }
-          });
-
-          socket.on('disconnect', () => {
-            console.log('Disconnected from server');
-            if (frameInterval) clearTimeout(frameInterval);
-            statusText.innerText = "🔴 Disconnected!";
-            cleanupLocationServices();
-          });
-
+            // Start capturing frames once video is ready
+            prepareFrameCapture();
+          };
         })
         .catch((error) => {
           console.error('Error accessing camera:', error);
-          statusText.innerText = "⚠️ Camera access denied!";
+          updateStatusIndicator('error', '⚠️ Camera access denied!');
         });
+    }
 
-      socket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
-        statusText.innerText = "⚠️ Server connection error!";
-      });
+    function prepareFrameCapture() {
+      // Create canvas for frame capture
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
 
-      socket.on('error', (error) => {
-        console.error('Socket error:', error);
-        statusText.innerText = "⚠️ Streaming error: " + error.message;
-      });
-    });
-    
-    function createDetectionResultHTML(result) {
-      if (result.noDetections) {
-        return `<p>No issues detected in this frame.</p>`;
+      // Set canvas size to match video
+      function updateCanvasSize() {
+        canvas.width = elements.video.videoWidth;
+        canvas.height = elements.video.videoHeight;
       }
-      
-      let html = `<h3>Detection Results</h3>`;
-      
-      // Add counts information
-      if (result.data && result.data.counts) {
-        const counts = result.data.counts;
-        html += `<div class="detection-info">`;
-        html += `<strong>Detected ${result.data.totalDetections} issues:</strong><br>`;
-        
-        for (const [key, value] of Object.entries(counts)) {
-          html += `- ${value} ${key}<br>`;
-        }
-        
-        // Add processing time
-        if (result.data.processingTime) {
-          html += `<br>Processing time: ${result.data.processingTime.toFixed(2)}s`;
-        }
-        
-        html += `</div>`;
+
+      // Wait for video dimensions to be available
+      if (elements.video.videoWidth) {
+        updateCanvasSize();
+        startFrameCapture(canvas, ctx);
+      } else {
+        elements.video.addEventListener('loadeddata', () => {
+          updateCanvasSize();
+          startFrameCapture(canvas, ctx);
+        });
       }
-      
-      return html;
+    }
+
+    function startFrameCapture(canvas, ctx) {
+      updateStatusIndicator('active', '📸 Starting capture sequence');
+
+      // Schedule first capture
+      scheduleNextCapture();
+
+      function captureFrame() {
+        // Check if stream is still active
+        if (!streamActive || !elements.video.srcObject) {
+          console.log('Stream inactive, stopping capture');
+          return;
+        }
+
+        console.log('Capturing frame...');
+        updateStatusIndicator('active', '📸 Capturing frame...');
+        lastCaptureTime = Date.now();
+        elements.lastCaptureDisplay.textContent = new Date().toLocaleTimeString();
+
+        // Check if video is ready before drawing
+        if (elements.video.readyState === 4) { // HAVE_ENOUGH_DATA
+          // Apply flash effect
+          elements.video.classList.add('flash');
+
+          // Draw video frame to canvas
+          ctx.drawImage(elements.video, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+
+          // Get location data
+          const locationToSend = getBestAvailableLocation();
+
+          // Send frame with location data
+          console.log('Sending frame with location data:', locationToSend);
+          updateStatusIndicator('active', '📤 Sending frame...');
+
+          socket.emit('streamVideo', {
+            imageData: dataUrl,
+            location: locationToSend,
+            speed: currentSpeed,
+            frameRate: currentFrameRate
+          });
+
+          // Remove flash effect
+          setTimeout(() => {
+            elements.video.classList.remove('flash');
+
+            const accuracyText = locationToSend ?
+              `${locationToSend.accuracy}m` : "unknown";
+
+            updateStatusIndicator('active', '✅ Frame sent');
+            elements.accuracyDisplay.textContent = accuracyText;
+
+            // Schedule next capture
+            scheduleNextCapture();
+          }, 300);
+        } else {
+          console.warn('Video not ready for capture, retrying in 500ms');
+          setTimeout(captureFrame, 500);
+        }
+      }
+
+      // Make captureFrame accessible for scheduled captures
+      window.dashcam = window.dashcam || {};
+      window.dashcam.captureFrame = captureFrame;
+    }
+
+    function scheduleNextCapture() {
+      // Calculate delay based on current speed and frame rate
+      const delay = 1000 / currentFrameRate;
+      nextScheduledCapture = Date.now() + delay;
+
+      // Update display
+      const nextCaptureTime = new Date(nextScheduledCapture);
+      elements.nextCaptureDisplay.textContent = nextCaptureTime.toLocaleTimeString();
+
+      // Clear any existing scheduled capture
+      if (nextCaptureTimeout) clearTimeout(nextCaptureTimeout);
+
+      // Schedule next capture
+      nextCaptureTimeout = setTimeout(() => {
+        if (window.dashcam && window.dashcam.captureFrame) {
+          window.dashcam.captureFrame();
+        }
+      }, delay);
+
+      console.log(`Next frame scheduled in ${delay}ms (${currentFrameRate} fps)`);
+    }
+
+    function handleDetectionResult(result) {
+      console.log('Detection complete:', result);
+
+      if (result.success) {
+        updateStatusIndicator('active', result.message || '✅ Detection complete');
+
+        // Show alert if there are detections
+        if (result.data && result.data.totalDetections > 0) {
+          let alertMessage = `Detected ${result.data.totalDetections} issues`;
+
+          // Add counts if available
+          if (result.data.counts) {
+            const counts = Object.entries(result.data.counts)
+              .map(([key, value]) => `${value} ${key}`)
+              .join(', ');
+
+            alertMessage += `: ${counts}`;
+          }
+
+          showDetectionAlert(alertMessage);
+        }
+      }
     }
 
     function initializeLocationTracking() {
-      // Start a high-frequency watch for rapid position updates
+      // Clear any existing watchers
+      cleanupLocationServices();
+
+      // Start location tracking with two approaches for better results
       startFastLocationWatch();
-      
-      // Also start a high-accuracy watch (might be slower but more precise)
       startPreciseLocationWatch();
-      
-      // Use supplementary methods for additional accuracy enhancement
+
+      // Use supplementary methods for additional data
       trySupplementaryLocationMethods();
     }
-    
+
     function startFastLocationWatch() {
       // Fast location updates with moderate accuracy
       const fastOptions = {
@@ -335,14 +608,22 @@
         timeout: 5000,
         maximumAge: 0
       };
-      
-      fastWatchId = navigator.geolocation.watchPosition(
-        handlePositionUpdate,
-        (error) => console.warn('Fast location watch error:', error),
-        fastOptions
-      );
+
+      if ('geolocation' in navigator) {
+        fastWatchId = navigator.geolocation.watchPosition(
+          handlePositionUpdate,
+          (error) => {
+            console.warn('Fast location watch error:', error);
+            updateStatusIndicator('warning', '⚠️ Location error: ' + getLocationErrorMessage(error));
+          },
+          fastOptions
+        );
+      } else {
+        console.warn('Geolocation not available');
+        updateStatusIndicator('warning', '⚠️ Location unavailable');
+      }
     }
-    
+
     function startPreciseLocationWatch() {
       // Maximum accuracy location updates (might be slower)
       const preciseOptions = {
@@ -350,136 +631,157 @@
         timeout: 15000,
         maximumAge: 0
       };
-      
-      watchId = navigator.geolocation.watchPosition(
-        handlePositionUpdate,
-        (error) => console.warn('Precise location watch error:', error),
-        preciseOptions
-      );
+
+      if ('geolocation' in navigator) {
+        watchId = navigator.geolocation.watchPosition(
+          handlePositionUpdate,
+          (error) => {
+            console.warn('Precise location watch error:', error);
+            // Don't show this error as we have a backup fast watcher
+          },
+          preciseOptions
+        );
+      }
     }
-    
+
+    function getLocationErrorMessage(error) {
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          return "Permission denied";
+        case error.POSITION_UNAVAILABLE:
+          return "Position unavailable";
+        case error.TIMEOUT:
+          return "Timed out";
+        default:
+          return "Unknown error";
+      }
+    }
+
     function handlePositionUpdate(position) {
       // Process new position data
       const currentLocation = {
         // Basic coordinates
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
-        
+
         // Precision data
         accuracy: position.coords.accuracy,
         altitude: position.coords.altitude,
         altitudeAccuracy: position.coords.altitudeAccuracy,
         heading: position.coords.heading,
         speed: position.coords.speed,
-        
+
         // Timestamp
         timestamp: position.timestamp,
-        
+
         // Source tracking for internal use
         source: position.coords.accuracy > 20 ? 'fast' : 'precise'
       };
-      
+
       // Update speed if available and update frame rate accordingly
       if (currentLocation.speed !== null && currentLocation.speed !== undefined) {
         updateSpeed(currentLocation.speed);
       }
-      
+
       // Update the location display
       updateLocationInfo(currentLocation);
-      
+
       // Store measurement for averaging/filtering
       addLocationMeasurement(currentLocation);
-      
+
       // Update best location if this one is more accurate
       if (currentLocation.accuracy < bestAccuracy) {
         bestAccuracy = currentLocation.accuracy;
-        bestLocation = {...currentLocation};
+        bestLocation = { ...currentLocation };
         bestLocation.confidence = 'high';
         console.log(`New best location accuracy: ${bestAccuracy}m`);
       }
     }
-    
+
     function updateSpeed(speedInMps) {
       // Update current speed (convert from m/s to km/h for display)
       currentSpeed = speedInMps;
       const speedInKmh = speedInMps * 3.6;
-      
+
       // Update display
-      const speedDisplay = document.getElementById('speedDisplay');
-      speedDisplay.textContent = `Speed: ${speedInKmh.toFixed(1)} km/h`;
-      
+      elements.speedDisplay.textContent = `${speedInKmh.toFixed(1)} km/h`;
+
       // Update frame rate based on speed thresholds
       updateFrameRate(speedInKmh);
     }
-    
+
     function updateFrameRate(speedInKmh) {
       // Find appropriate frame rate for current speed
       let newFrameRate = SPEED_THRESHOLDS[0].frameRate; // Default to lowest
-      
+
       for (const threshold of SPEED_THRESHOLDS) {
         if (speedInKmh <= threshold.speed) {
           newFrameRate = threshold.frameRate;
           break;
         }
       }
-      
+
       // Only update if frame rate changed
       if (newFrameRate !== currentFrameRate) {
         currentFrameRate = newFrameRate;
         console.log(`Speed: ${speedInKmh.toFixed(1)} km/h - Frame rate adjusted to ${currentFrameRate} fps`);
-        
+
         // Update display
-        const frameRateDisplay = document.getElementById('frameRateDisplay');
-        frameRateDisplay.textContent = `Frame Rate: ${currentFrameRate.toFixed(1)} fps`;
+        elements.frameRateDisplay.textContent = `${currentFrameRate.toFixed(1)} fps`;
+
+        // Reschedule next capture with new frame rate if we're currently capturing
+        if (streamActive && nextCaptureTimeout) {
+          scheduleNextCapture();
+        }
       }
     }
-    
+
     function addLocationMeasurement(location) {
       // Add to the measurement cache
       locationMeasurements.push(location);
-      
+
       // Keep only the most recent measurements
-      if (locationMeasurements.length > MAX_MEASUREMENTS) {
+      while (locationMeasurements.length > MAX_MEASUREMENTS) {
         locationMeasurements.shift();
       }
     }
-    
+
     function getBestAvailableLocation() {
       // First try to get a filtered/averaged high-precision location
       const filteredLocation = getFilteredLocation();
-      
+
       if (filteredLocation) {
         return filteredLocation;
       }
-      
+
       // Fall back to best single measurement if we have one
       if (bestLocation) {
         return bestLocation;
       }
-      
+
       // Last resort - most recent measurement regardless of quality
       if (locationMeasurements.length > 0) {
-        const lastLocation = {...locationMeasurements[locationMeasurements.length - 1]};
+        const lastLocation = { ...locationMeasurements[locationMeasurements.length - 1] };
         lastLocation.confidence = 'low';
         return lastLocation;
       }
-      
+
       return null; // No location data available
     }
-    
+
     function getFilteredLocation() {
       if (locationMeasurements.length < 3) return null;
-      
+
       // Filter out low-quality measurements
       const goodMeasurements = locationMeasurements.filter(
         loc => loc.accuracy && loc.accuracy < 50
       );
-      
+
       if (goodMeasurements.length < 3) return null;
-      
+
       // Use recent measurements that are relatively consistent
       const recentGoodMeasurements = goodMeasurements.slice(-5);
-      
+
       // Calculate average position
       const sum = recentGoodMeasurements.reduce(
         (acc, loc) => {
@@ -488,58 +790,58 @@
           // Weight measurements by inverse of accuracy (more accurate = higher weight)
           acc.weight += 1 / Math.max(loc.accuracy, 1);
           return acc;
-        }, 
+        },
         { latSum: 0, lngSum: 0, weight: 0 }
       );
-      
+
       // Create weighted average location
       const avgLocation = {
         latitude: sum.latSum / recentGoodMeasurements.length,
         longitude: sum.lngSum / recentGoodMeasurements.length,
-        
+
         // Average additional data from good measurements
         altitude: calculateAverage(recentGoodMeasurements, 'altitude'),
         heading: calculateAverage(recentGoodMeasurements, 'heading'),
         speed: calculateAverage(recentGoodMeasurements, 'speed'),
-        
+
         // Use the best accuracy from the set
         accuracy: Math.min(...recentGoodMeasurements.map(loc => loc.accuracy)),
-        
+
         // Use latest timestamp
         timestamp: Math.max(...recentGoodMeasurements.map(loc => loc.timestamp)),
-        
+
         // Mark as filtered data
         source: 'filtered',
         confidence: 'medium',
-        
+
         // Include satellite data if available
         satelliteData: getSatelliteInfo()
       };
-      
+
       return avgLocation;
     }
-    
+
     function calculateAverage(locations, property) {
       const validValues = locations
         .map(loc => loc[property])
         .filter(value => value !== null && value !== undefined);
-      
+
       if (validValues.length === 0) return null;
-      
+
       return validValues.reduce((sum, val) => sum + val, 0) / validValues.length;
     }
-    
+
     function trySupplementaryLocationMethods() {
       // Try to access device orientation for improved heading
       if (window.DeviceOrientationEvent) {
         window.addEventListener('deviceorientation', handleOrientation);
       }
-      
+
       // Try to access device motion for additional data
       if (window.DeviceMotionEvent) {
         window.addEventListener('devicemotion', handleMotion);
       }
-      
+
       // Try IP-based geolocation as a fallback or supplement
       fetch('https://ipapi.co/json/')
         .then(response => response.json())
@@ -561,7 +863,7 @@
         })
         .catch(err => console.warn('IP geolocation failed:', err));
     }
-    
+
     // Device orientation handling
     let deviceOrientation = null;
     function handleOrientation(event) {
@@ -570,8 +872,13 @@
         beta: event.beta,   // front-to-back tilt
         gamma: event.gamma  // left-to-right tilt
       };
+
+      // Update heading display if available
+      if (event.alpha !== null && event.alpha !== undefined) {
+        elements.headingDisplay.textContent = `${event.alpha.toFixed(1)}°`;
+      }
     }
-    
+
     // Device motion handling
     let deviceMotion = null;
     function handleMotion(event) {
@@ -581,54 +888,87 @@
         interval: event.interval
       };
     }
-    
+
     // Get satellite info if available (not directly accessible in most browsers)
     function getSatelliteInfo() {
       // This is a placeholder - browsers don't provide direct satellite info
-      // But we could return anything that might be available in future
       return null;
     }
-    
+
     function updateLocationInfo(location) {
-      const locationInfo = document.getElementById('locationInfo');
-      locationInfo.innerHTML = `
-        <strong>Current Location Data:</strong><br>
-        Latitude: ${location.latitude.toFixed(6)}<br>
-        Longitude: ${location.longitude.toFixed(6)}<br>
-        Accuracy: ${location.accuracy ? location.accuracy.toFixed(1) + 'm' : 'Unknown'}<br>
-        Source: ${location.source || 'Standard'}<br>
-        Time: ${new Date(location.timestamp).toLocaleTimeString()}<br>
-        ${location.altitude ? 'Altitude: ' + location.altitude.toFixed(1) + 'm<br>' : ''}
-        ${location.heading ? 'Heading: ' + location.heading.toFixed(1) + '°<br>' : ''}
-        ${location.speed ? 'Speed: ' + (location.speed * 3.6).toFixed(1) + ' km/h<br>' : ''}
-      `;
+      // Update the stats panel with location info
+      elements.latitudeDisplay.textContent = location.latitude.toFixed(6);
+      elements.longitudeDisplay.textContent = location.longitude.toFixed(6);
+
+      // Update accuracy if available
+      if (location.accuracy !== null && location.accuracy !== undefined) {
+        elements.accuracyDisplay.textContent = `${location.accuracy.toFixed(1)}m`;
+      }
+
+      // Update heading if available
+      if (location.heading !== null && location.heading !== undefined) {
+        elements.headingDisplay.textContent = `${location.heading.toFixed(1)}°`;
+      }
     }
-    
+
     function cleanupLocationServices() {
       // Clean up all location services
       if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
         watchId = null;
       }
-      
+
       if (fastWatchId !== null) {
         navigator.geolocation.clearWatch(fastWatchId);
         fastWatchId = null;
       }
-      
+
       // Clear frame capture interval
-      if (frameInterval) {
-        clearTimeout(frameInterval);
-        frameInterval = null;
+      if (nextCaptureTimeout) {
+        clearTimeout(nextCaptureTimeout);
+        nextCaptureTimeout = null;
       }
-      
+
       // Remove event listeners
       window.removeEventListener('deviceorientation', handleOrientation);
       window.removeEventListener('devicemotion', handleMotion);
     }
-    
-    // Clean up when page is closed
-    window.addEventListener('beforeunload', cleanupLocationServices);
+
+    function cleanupResources() {
+      // Clean up everything when page is closed or reloaded
+      cleanupLocationServices();
+
+      // Stop video stream if active
+      if (elements.video.srcObject) {
+        const tracks = elements.video.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+        elements.video.srcObject = null;
+      }
+
+      // Disconnect socket
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+
+      streamActive = false;
+    }
+
+    function stopStream() {
+      cleanupResources();
+
+      // Reset UI
+      elements.controlsOverlay.style.display = 'flex';
+      elements.statsPanel.style.display = 'none';
+      elements.statusIndicator.style.display = 'none';
+
+      updateStatusIndicator('', 'Stream stopped');
+      console.log('Stream stopped');
+    }
+
+    // Initialize the application
+    setupEventListeners();
   </script>
 </body>
+
 </html>
